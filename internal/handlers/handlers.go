@@ -1,12 +1,17 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/CloudyKit/jet/v6"
 	"github.com/gorilla/websocket"
 )
+
+var wsChan = make(chan WsPayload)
+
+var clients = make(map[WebSocketConnection]string)
 
 var views = jet.NewSet(
 	jet.NewOSFileSystemLoader("./html"),
@@ -28,11 +33,22 @@ func Home(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type WebSocketConnection struct {
+	*websocket.Conn
+}
+
 // WsJsonResponse defines the response sent back form websocket
 type WsJsonResponse struct {
 	Action      string `json:"action"`
 	Message     string `json:"message"`
 	MessageType string `json:"message_type"`
+}
+
+type WsPayload struct {
+	Action   string              `json:"action"`
+	Username string              `json:"username"`
+	Message  string              `json:"message"`
+	Conn     WebSocketConnection `json:"-"`
 }
 
 // WsEndPoint upgrades the connection to websocket
@@ -43,17 +59,62 @@ func WsEndPoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer ws.Close()
-
 	log.Println("Client connected to endpoint")
 
 	var response WsJsonResponse
 
+	conn := WebSocketConnection{ws}
+	clients[conn] = ""
 	response.Message = `<em><small>Connected to server!</small></em>`
 
 	err = ws.WriteJSON(response)
 	if err != nil {
 		log.Println(err)
+	}
+
+	go ListenForWs(&conn)
+}
+
+func ListenForWs(conn *WebSocketConnection) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Error", fmt.Sprintf("%v", r))
+		}
+	}()
+
+	var payLoad WsPayload
+
+	for {
+		err := conn.ReadJSON(&payLoad)
+		if err != nil {
+			// do nothing
+		} else {
+			payLoad.Conn = *conn
+			wsChan <- payLoad
+		}
+	}
+}
+
+func ListenToWsChannel() {
+	var response WsJsonResponse
+
+	for {
+		e := <-wsChan
+		response.Action = "Got Here"
+		response.Message = fmt.Sprintf("Some message, and action was %s", e.Action)
+		broadcastToAll(response)
+	}
+}
+
+func broadcastToAll(response WsJsonResponse) {
+	for client := range clients {
+		err := client.WriteJSON(response)
+		if err != nil {
+			log.Println(err)
+			_ = client.Close()
+			delete(clients, client)
+		}
+
 	}
 }
 
