@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.multistage
+    networks:
+      - default
+    ports:
+    - "8080:8080"
