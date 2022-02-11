@@ -123,15 +123,15 @@
             }
         };
 
-        let userInput = document.getElementById("username");
-        userInput.addEventListener("change", function() {
+        
+        userField.addEventListener("change", function() {
             socket.send(JSON.stringify({
                 action: "username",
-                username: userInput.value
+                username: userField.value
             }));
         });
 
-        document.getElementById("message").addEventListener("keydown", function(e) {
+        messageField.addEventListener("keydown", function(e) {
             if (e.keyCode === 13) {
                 if (!socket) {
                     console.log("no connection!");
@@ -155,10 +155,10 @@
         }
         let jsonData = {};
         jsonData["action"] = "broadcast";
-        jsonData["message"] = document.getElementById("message").value;
-        jsonData["username"] = document.getElementById("username").value;
+        jsonData["message"] = messageField.value;
+        jsonData["username"] = userField.value;
         socket.send(JSON.stringify(jsonData));
-        document.getElementById("message").value = "";
+        messageField.value = "";
     }
 </script>
 
