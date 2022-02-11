@@ -111,6 +111,12 @@ func ListenToWsChannel() {
 			response.Action = "list_users"
 			response.ConnectedUsers = users
 			broadcastToAll(response)
+		case "left":
+			//remove the user from the list
+			delete(clients, e.Conn)
+			response.Action = "list_users"
+			response.ConnectedUsers = getUserList()
+			broadcastToAll(response)
 		}
 
 		// response.Action = "Got Here"
@@ -122,7 +128,9 @@ func ListenToWsChannel() {
 func getUserList() []string {
 	var users []string
 	for client := range clients {
-		users = append(users, clients[client])
+		if clients[client] != "" {
+			users = append(users, clients[client])
+		}
 	}
 	sort.Strings(users)
 	return users
