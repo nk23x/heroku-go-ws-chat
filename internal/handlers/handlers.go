@@ -117,6 +117,10 @@ func ListenToWsChannel() {
 			response.Action = "list_users"
 			response.ConnectedUsers = getUserList()
 			broadcastToAll(response)
+		case "broadcast":
+			response.Action = "broadcast"
+			response.Message = e.Username + ": " + e.Message
+			broadcastToAll(response)
 		}
 
 		// response.Action = "Got Here"
